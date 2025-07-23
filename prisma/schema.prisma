@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Customer {
+  id            String         @id @default(cuid())
+  name          String
+  upiId         String         @unique
+  email         String
+  phone         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+
+  @@index([upiId])
+  @@index([email])
+}
+
+model Subscription {
+  id                    String    @id @default(cuid())
+  merchantSubscriptionId String   @unique
+  customerId            String
+  customer              Customer  @relation(fields: [customerId], references: [id])
+  merchantOrderId       String
+  phonepeOrderId        String?
+  weeklyAmount          Float
+  frequency             String    @default("WEEKLY")
+  status                String    @default("PENDING")
+  mandateUrl            String?
+  scheduledForDebit     Boolean   @default(false)
+  nextDebitDate         DateTime?
+  lastDebitDate         DateTime?
+  activatedAt           DateTime?
+  cancelledAt           DateTime?
+  lastWebhookAt         DateTime?
+  lastChecked           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  payments              Payment[]
+
+  @@index([status])
+  @@index([customerId])
+  @@index([merchantSubscriptionId])
+}
+
+model Payment {
+  id               String       @id @default(cuid())
+  subscriptionId   String
+  subscription     Subscription @relation(fields: [subscriptionId], references: [id])
+  customerId       String
+  customerName     String
+  merchantOrderId  String       @unique
+  transactionId    String?      @unique
+  amount           Float
+  status           String       @default("PENDING")
+  type             String // WEEKLY_DEBIT, AUTOMATED_WEEKLY_DEBIT
+  webhookReceivedAt DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([transactionId])
+}
+
+model AuthToken {
+  id         String   @id @default(cuid())
+  token      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
